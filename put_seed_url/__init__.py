@@ -1,6 +1,8 @@
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
+import azure.functions as func
 import json
 import logging
+import copy
 
 seed_url={
     "Flipkart": [
@@ -4251,12 +4253,29 @@ connect = {
         }
     },
 }
+logging.info('Python HTTP trigger function processed a request.')
 
-def main(req: func.HttpRequest) -> func.HttpResponse:
+def main(req: func.HttpRequest) -> func.HttpResponse:    
     logging.info('Python HTTP trigger function processed a request.')
 
-    marketplace = req.params.get('marketplace')
-    queue_name = req.params.get('type')    
+    name = req.params.get('name')
+    queue_type = req.params.get('type')
+    if not name and not queue_type:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            name = req_body.get('name')
+            queue_type = req_body.get('type')
+    print(name,"this the marketplace name.")
+    logging.info('Python HTTP trigger function recieved these params {},{}'.format(name,queue_type))
+
+    
+    marketplace = copy.deepcopy(name)
+    queue_name = copy.deepcopy(queue_type)   
+    # marketplace = req.params.get('marketplace')
+    # queue_name = req.params.get('type')    
     azure_queue_name = '{0}.{1}'.format(marketplace.lower().replace(' ','_'),queue_name)
 
     servicebus_client = ServiceBusClient.from_connection_string(conn_str=connect['azure_connection_string'][marketplace][queue_name], logging_enable=True)    
@@ -4280,5 +4299,5 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     else:
         return func.HttpResponse(
              "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
-             status_code=200
+             status_code=200)
         )
